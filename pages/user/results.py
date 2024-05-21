@@ -2,10 +2,15 @@ import pandas as pd
 import dash
 from dash import html, dcc, clientside_callback, Input, Output, State
 import dash_bootstrap_components as dbc
-from utils.get_movie_data import get_movie_data
+from tensorflow.keras.models import load_model
+from utils.predict_top_n import predict_top_n_with_loaded_model
+
 
 dash.register_page(__name__, path="/user/results")
 
+loaded_model = load_model("neural_collaborative_filtering_model.h5")
+
+df_movies = pd.read_csv("./ml-latest-small/movies.csv")
 df_ratings = pd.read_csv("ml-latest-small/ratings.csv")
 df_tags = pd.read_csv("ml-latest-small/tags.csv")
 df_links = pd.read_csv("ml-latest-small/links.csv")
@@ -102,31 +107,35 @@ def pagination_component(images, id_name):
 
 
 def layout(user_id, genre=None, **other_unknown_query_strings):
-    sorted_movies_ids = df_merged[df_merged["userId"] == int(user_id)].sort_values(
-        "timestamp"
-    )["imdbId"]
-    # movies_images = [
-    #     get_movie_data(movie_id)["image_url"] for movie_id in sorted_movies_ids[:20]
-    # ]
+    # sorted_movies_ids = df_merged[df_merged["userId"] == int(user_id)].sort_values(
+    #     "timestamp"
+    # )["imdbId"]
+
+    recommended_movies_ids = predict_top_n_with_loaded_model(
+        loaded_model=loaded_model,
+        ratings=df_ratings,
+        movies=df_movies,
+        user_id=int(user_id),
+        n=10,
+    )
     return html.Div(
         [
-            dcc.Loading(
-                [
-                    dbc.Row(pagination_component(movie_images, "recent")),
-                    dbc.Row(pagination_component(movie_images, "recommended")),
-                    dbc.Row(
-                        dbc.Col(
-                            dbc.Button(
-                                "Back to Home",
-                                href="/",
-                                color="warning",
-                                style={"marginTop": "20px"},
-                            ),
-                            width={"size": 2, "offset": 5},
-                        ),
+            dbc.Row(pagination_component(movie_images, "recent")),
+            dbc.Row(pagination_component(movie_images, "recommended")),
+            dbc.Row(
+                dbc.Col(
+                    dbc.Button(
+                        "Back to Home",
+                        href="/",
+                        color="warning",
+                        style={"marginTop": "20px"},
                     ),
-                ]
-            , type="default")
+                    width={"size": 2, "offset": 5},
+                ),
+            ),
+            html.Div(
+                [html.P(f"movie_id:{id}") for id in recommended_movies_ids],
+            )
         ],
         style={
             "backgroundColor": "black",

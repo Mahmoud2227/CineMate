@@ -1,8 +1,14 @@
+import pandas as pd
 import dash
 from dash import html, dcc, clientside_callback, Input, Output, State
 import dash_bootstrap_components as dbc
+from utils.get_sim_matrix import get_sim_matrix
 
 dash.register_page(__name__, path="/movie/results")
+
+ratings = pd.read_csv("ml-latest-small/ratings.csv")
+movies = pd.read_csv("ml-latest-small/movies.csv")
+
 
 movie_images = [
     "https://www.w3schools.com/w3images/lights.jpg",
@@ -88,6 +94,10 @@ def pagination_component(images, id_name):
 
 
 def layout(title=None, **other_unknown_query_strings):
+    similarity = get_sim_matrix(ratings, movies)
+    movie_id = movies[movies["title"] == title]["movieId"].values[0]
+    similar_movies = similarity[movie_id].sort_values(ascending=False).index[1:16]
+
     return html.Div(
         [
             dbc.Row(pagination_component(movie_images, "similar")),
@@ -102,6 +112,7 @@ def layout(title=None, **other_unknown_query_strings):
                     width={"size": 2, "offset": 5},
                 ),
             ),
+            html.Div([html.P(f"movie_id:{id}") for id in similar_movies]),
         ],
         style={
             "backgroundColor": "black",
@@ -138,4 +149,3 @@ clientside_callback(
         State("similar-store-right-clicks", "data"),
     ],
 )
-

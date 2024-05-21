@@ -1,32 +1,20 @@
+import pandas as pd
+
 import dash
 from dash import html, Input, Output, callback, dcc
 import dash_bootstrap_components as dbc
 
+movies = pd.read_csv("ml-latest-small/movies.csv")
+
 dash.register_page(__name__, path="/movie")
 
-movie_titles = [
-    "The Shawshank Redemption",
-    "The Godfather",
-    "The Dark Knight",
-    "The Godfather: Part II",
-    "The Lord of the Rings: The Return of the King",
-    "Pulp Fiction",
-    "Schindler's List",
-    "12 Angry",
-    "The Lord of the Rings: The Fellowship of the Ring",
-    "Fight Club",
-    "Forrest Gump",
-    "Inception",
-    "The Lord of the Rings: The Two Towers",
-    "Star Wars: Episode V - The Empire Strikes Back",
-    "The Matrix",
-]
+movie_titles = movies["title"].unique()
 
 movie_dropdown = dcc.Dropdown(
     id="movie-dropdown",
     options=[{"label": movie, "value": movie} for movie in movie_titles],
     placeholder="Select Movie",
-    value="The Shawshank Redemption",
+    value=movie_titles[0],
 )
 
 layout = html.Div(

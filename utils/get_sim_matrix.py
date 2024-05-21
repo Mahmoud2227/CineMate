@@ -1,0 +1,28 @@
+import pandas as pd
+from sklearn.metrics.pairwise import cosine_similarity 
+
+def get_sim_matrix(ratings_df, movies_df):
+    ratings = ratings_df.copy()
+    movies = movies_df.copy()
+    movie_data = pd.merge(ratings, movies, on='movieId')
+    year_extracted = movie_data.title.str.extract(r"(\d{4})", expand=True)
+    movies["year"] = year_extracted[0]
+    # movies["year"]=movie_data.title.str.extract(r"((\d{4}))", expand=True)
+    movies["year"].fillna(1995, inplace=True)
+    movies["year_cat"]=pd.cut(movies["year"].astype(int), bins=[1900, 1970, 1990, 2000, 2010, 2020], labels=["1900-1970", "1970-1990", "1990-2000", "2000-2010", "2010-2020"])
+    year_cat=pd.get_dummies(movies["year_cat"],dtype=int)
+    year_cat["movieId"]=movies["movieId"]
+    movie_genres = movies.set_index('movieId')['genres'].str.get_dummies(sep='|')
+    utility_matrix= movie_data.pivot_table(index='movieId', columns='userId', values='rating')
+    utility_matrix.fillna(0, inplace=True)
+    final=utility_matrix.merge(movie_genres, on='movieId', how='inner')
+    final=final.merge(year_cat, on='movieId', how='inner')
+    final.set_index('movieId', inplace=True)
+    similarity=cosine_similarity(final)
+    similarity=pd.DataFrame(similarity, index=final.index, columns=final.index,dtype=float)
+    return similarity
+
+ratings = pd.read_csv("ml-latest-small/ratings.csv")
+movies = pd.read_csv("ml-latest-small/movies.csv")
+
+similarity = get_sim_matrix(ratings, movies)
