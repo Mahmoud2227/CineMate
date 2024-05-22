@@ -1,86 +1,66 @@
 import numpy as np
-import pandas as pd
 import dash
-from dash import html, Input, Output, callback
+from dash import html, Input, Output, callback,dcc
 import dash_bootstrap_components as dbc
 
 dash.register_page(__name__, path="/user")
 
 users = np.arange(1, 611)
-genres = [
-    "Action",
-    "Adventure",
-    "Comedy",
-    "Drama",
-    "Horror",
-    "Mystery",
-    "Romance",
-    "Sci-Fi",
-    "Thriller",
-    "Western",
-]
 
-user_select = dbc.Select(
-    id="user-select",
+user_dropdown = dcc.Dropdown(
+    id="user-dropdown",
     options=[{"label": f"User {user}", "value": user} for user in users],
+    placeholder="Select User",
     value=1,
-    style={"width": "fit-content", "height": "fit-content"},
+    style={"width": "200px", "height": "fit-content"},
 )
 
-genres_select = dbc.Select(
-    id="genres-select",
-    options=[{"label": genre, "value": genre} for genre in genres],
-    value="Action",
-    style={"width": "fit-content", "height": "fit-content"},
-)
-
-layout = html.Div(
+layout = dbc.Row(
     [
-        dbc.Row(
+        dbc.Col(
+            dbc.Button(
+                html.Img(src="/assets/left-arrow.png", style={"width": "50px"}),
+                href="/",
+                style={"backgroundColor": "transparent", "border": "none"},
+            ),
+            width=1,
+        ),
+        dbc.Col(html.Img(src="/assets/user-bg.png"), width=5),
+        dbc.Col(
             [
-                dbc.Col(
-                    [html.H3("Select User"), user_select],
-                    width=6,
+                dbc.Row(
+                    [
+                        dbc.Col(
+                            [
+                                html.H3("Select User", style={"color": "#c41e18"}),
+                                user_dropdown,
+                                dbc.Button(
+                                    "Submit",
+                                    href="",
+                                    id="user-submit-button",
+                                    style={
+                                        "backgroundColor": "#c41e18",
+                                        "border": "none",
+                                    },
+                                ),
+                            ],
+                            # width=3,
+                            style={
+                                "display": "flex",
+                                "alignItems": "center",
+                                "justifyContent": "center",
+                                "gap": "10px",
+                            },
+                        ),
+                    ],
                     style={
-                        "display": "flex",
-                        "alignItems": "center",
-                        "gap": "10px",
+                        "paddingInline": "100px",
+                        "marginBlock": "auto",
                     },
-                ),
-                dbc.Col(
-                    [html.H3("Select Genre"), genres_select],
-                    width=6,
-                    style={
-                        "display": "flex",
-                        "alignItems": "center",
-                        "gap": "10px",
-                    },
-                ),
+                )
             ],
-            style={"paddingTop": "50px", "paddingInline": "100px"},
-        ),
-        dbc.Row(
-            dbc.Col(
-                dbc.Button(
-                    "Submit",
-                    href="",
-                    id="user-submit-button",
-                    color="success",
-                    style={"marginTop": "20px"},
-                ),
-                width={"size": 2, "offset": 5},
-            ),
-        ),
-        dbc.Row(
-            dbc.Col(
-                dbc.Button(
-                    "Back to Home",
-                    href="/",
-                    color="warning",
-                    style={"marginTop": "20px"},
-                ),
-                width={"size": 2, "offset": 5},
-            ),
+            width=6,
+            style={"display": "flex", "flexDirection": "column", "height": "100vh"},
         ),
     ],
     style={
@@ -88,14 +68,12 @@ layout = html.Div(
         "minHeight": "100vh",
         "maxWidth": "100vw",
         "overflowX": "hidden",
+        "paddingInline": "50px",
     },
+    align="center",
 )
 
 
-@callback(
-    Output("user-submit-button", "href"),
-    Input("user-select", "value"),
-    Input("genres-select", "value"),
-)
-def update_href(user, genre):
-    return f"/user/results?user_id={user}&genre={genre}"
+@callback(Output("user-submit-button", "href"), Input("user-dropdown", "value"))
+def update_href(user):
+    return f"/user/results?user_id={user}"

@@ -2,43 +2,22 @@ import pandas as pd
 import dash
 from dash import html, dcc, clientside_callback, Input, Output, State
 import dash_bootstrap_components as dbc
-from utils.get_sim_matrix import get_sim_matrix
+from utils.get_top_similar import get_top_similar
 
 dash.register_page(__name__, path="/movie/results")
 
-ratings = pd.read_csv("ml-latest-small/ratings.csv")
-movies = pd.read_csv("ml-latest-small/movies.csv")
+df_ratings = pd.read_csv("ml-latest-small/ratings.csv")
+df_movies = pd.read_csv("ml-latest-small/movies.csv")
 
-
-movie_images = [
-    "https://www.w3schools.com/w3images/lights.jpg",
-    "https://www.w3schools.com/w3images/nature.jpg",
-    "https://www.w3schools.com/w3images/mountains.jpg",
-    "https://www.w3schools.com/w3images/forest.jpg",
-    "https://www.w3schools.com/w3images/nature.jpg",
-    "https://www.w3schools.com/w3images/snow.jpg",
-    "https://www.w3schools.com/w3images/paris.jpg",
-    "https://www.w3schools.com/w3images/nature.jpg",
-    "https://www.w3schools.com/w3images/mountains.jpg",
-    "https://www.w3schools.com/w3images/forest.jpg",
-    "https://www.w3schools.com/w3images/nature.jpg",
-    "https://www.w3schools.com/w3images/snow.jpg",
-    "https://www.w3schools.com/w3images/paris.jpg",
-    "https://www.w3schools.com/w3images/nature.jpg",
-    "https://www.w3schools.com/w3images/mountains.jpg",
-]
+df_covers = pd.read_csv("ml-latest-small/movie_covers.csv")
+df_links = pd.read_csv("ml-latest-small/links.csv")
 
 
 def pagination_component(images, id_name):
     image_elements = [
         dbc.Card(
             dbc.CardImg(src=img, top=True),
-            style={
-                "marginRight": "10px",
-                "minWidth": "300px",
-                "maxHeight": "200px",
-                "overflow": "hidden",
-            },
+            style={"marginRight": "10px", "minWidth": "200px", "minHeight": "295px"},
         )
         for img in images
     ]
@@ -49,11 +28,19 @@ def pagination_component(images, id_name):
             html.Div(
                 [
                     html.Button(
-                        "←",
+                        html.I(
+                            className="fa-solid fa-arrow-left",
+                            style={"color": "#c41e18"},
+                        ),
                         id=f"{id_name}-left-arrow",
                         n_clicks=0,
                         className="arrow",
-                        style={"height": "40px", "width": "40px"},
+                        style={
+                            "height": "40px",
+                            "width": "40px",
+                            "backgroundColor": "transparent",
+                            "border": "none",
+                        },
                     ),
                     html.Div(
                         image_elements,
@@ -69,11 +56,19 @@ def pagination_component(images, id_name):
                         },
                     ),
                     html.Button(
-                        "→",
+                        html.I(
+                            className="fa-solid fa-arrow-right",
+                            style={"color": "#c41e18"},
+                        ),
                         id=f"{id_name}-right-arrow",
                         n_clicks=0,
                         className="arrow",
-                        style={"height": "40px", "width": "40px"},
+                        style={
+                            "height": "40px",
+                            "width": "40px",
+                            "backgroundColor": "transparent",
+                            "border": "none",
+                        },
                     ),
                 ],
                 style={
@@ -88,31 +83,66 @@ def pagination_component(images, id_name):
             "justifyContent": "center",
             "alignItems": "center",
             "backgroundColor": "black",
-            "marginTop": "100px",
         },
     )
 
 
 def layout(title=None, **other_unknown_query_strings):
-    similarity = get_sim_matrix(ratings, movies)
-    movie_id = movies[movies["title"] == title]["movieId"].values[0]
-    similar_movies = similarity[movie_id].sort_values(ascending=False).index[1:16]
+    movie_id = df_movies[df_movies["title"] == title]["movieId"].values[0]
+    movie_imdb_id = df_links[df_links["movieId"] == movie_id]["imdbId"].values[0]
+    movie_poster = df_covers[df_covers["MovieID"] == movie_imdb_id]["CoverURL"].values[
+        0
+    ]
 
+    sim_df = get_top_similar(df_ratings, df_movies, movieid=movie_id, topn=20)
+    sim_df = sim_df.merge(df_links, on='movieId')
+    sim_df = sim_df.merge(df_covers, right_on='MovieID', left_on='imdbId')
+    similar_movie_posters = sim_df["CoverURL"].values
+    
     return html.Div(
         [
-            dbc.Row(pagination_component(movie_images, "similar")),
             dbc.Row(
-                dbc.Col(
-                    dbc.Button(
-                        "Back to Home",
-                        href="/",
-                        color="warning",
-                        style={"marginTop": "20px"},
+                [
+                    dbc.Col(
+                        dbc.Card(
+                            dbc.CardImg(src=movie_poster, top=True),
+                            style={
+                                "width": "200px",
+                                "height": "295px",
+                            },
+                        )
                     ),
-                    width={"size": 2, "offset": 5},
-                ),
+                    dbc.Col(
+                        html.H1(
+                            title,
+                            style={"color": "#c41e18", "textAlign": "center"},
+                        )
+                    ),
+                ],
+                style={"paddingInline": "100px", "marginTop": "50px"},
             ),
-            html.Div([html.P(f"movie_id:{id}") for id in similar_movies]),
+            dbc.Row(
+                dbc.Button(
+                    html.Img(src="/assets/left-arrow.png", style={"width": "50px"}),
+                    href="/movie",
+                    style={
+                        "backgroundColor": "transparent",
+                        "border": "none",
+                        "textAlign": "left",
+                        "width": "fit-content",
+                    },
+                ),
+                style={"marginBlock": "20px", "paddingInline": "60px"},
+            ),
+            dbc.Row(
+                [
+                    html.H2(
+                        "Similar Movies",
+                        style={"color": "#c41e18", "marginLeft": "90px"},
+                    ),
+                    pagination_component(similar_movie_posters, "similar"),
+                ]
+            ),
         ],
         style={
             "backgroundColor": "black",
@@ -128,10 +158,10 @@ clientside_callback(
     function(n_clicks_left, n_clicks_right, prev_left, prev_right) {
         var container = document.getElementById('similar-image-container');
         if (n_clicks_left > prev_left) {
-            container.scrollLeft -= 500;
+            container.scrollLeft -= 1000;
         }
         if (n_clicks_right > prev_right) {
-            container.scrollLeft += 500;
+            container.scrollLeft += 1000;
         }
         return [n_clicks_left, n_clicks_right];
     }
